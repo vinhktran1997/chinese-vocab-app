@@ -1,90 +1,84 @@
-const HSK_LEVELS = [
-  'HSK1',
-  'HSK2',
-  'HSK3',
-  'HSK4',
-  'HSK5',
-  'HSK6',
-  'HSK7-9',
-  'Khác',
-];
+import {
+  HSK_LEVELS,
+  WORD_TYPES,
+  SOURCES,
+  STATUSES,
+  LIMITS,
+} from "../utils/wordFormUtils";
 
-const WORD_TYPES = [
-  'Danh Từ',
-  'Động Từ',
-  'Động Từ Li Hợp',
-  'Tính Từ',
-  'Phó Từ',
-  'Đại Từ',
-  'Lượng Từ',
-  'Số Từ',
-  'Trợ Từ',
-  'Giới Từ',
-  'Liên Từ',
-  'Cụm Từ',
-  'Động Từ/Danh Từ',
-  'Danh Từ (Phương vị từ)',
-  'Khác',
-];
-
-const STATUSES = ['Chưa Ôn', 'Đã Ôn'];
-
-const LIMITS = [20, 50, 100];
+function ChipGroup({ label, options, value, onChange }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-base-content/50">{label}</span>
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          className={`btn btn-xs ${value === "" ? "btn-primary" : "btn-ghost border border-base-300"}`}
+          onClick={() => onChange("")}
+        >
+          Tất Cả
+        </button>
+        {options.map((opt) => (
+          <button
+            key={opt}
+            className={`btn btn-xs ${value === opt ? "btn-primary" : "btn-ghost border border-base-300"}`}
+            onClick={() => onChange(opt)}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function FilterBar({ filters, onFilter, onLimitChange }) {
   return (
-    <div className="flex flex-wrap gap-3 mb-4">
+    <div className="flex flex-col gap-3 mb-4">
       {/* HSK Level */}
-      <select
-        className="select select-bordered"
+      <ChipGroup
+        label="Trình Độ"
+        options={HSK_LEVELS}
         value={filters.hskLevel}
-        onChange={(e) => onFilter('hskLevel', e.target.value)}
-      >
-        <option value="">Tất Cả Trình Độ</option>
-        {HSK_LEVELS.map((level) => (
-          <option key={level} value={level}>
-            {level}
-          </option>
-        ))}
-      </select>
+        onChange={(v) => onFilter("hskLevel", v)}
+      />
       {/* Word Type */}
-      <select
-        className="select select-bordered"
+      <ChipGroup
+        label="Từ Loại"
+        options={WORD_TYPES}
         value={filters.type}
-        onChange={(e) => onFilter('type', e.target.value)}
-      >
-        <option value="">Tất Cả Từ Loại</option>
-        {WORD_TYPES.map((type) => (
-          <option key={type} value={type}>
-            {type}
-          </option>
-        ))}
-      </select>
+        onChange={(v) => onFilter("type", v)}
+      />
       {/* Status */}
-      <select
-        className="select select-bordered"
+      <ChipGroup
+        label="Trạng Thái"
+        options={STATUSES}
         value={filters.status}
-        onChange={(e) => onFilter('status', e.target.value)}
-      >
-        <option value="">Tất Cả Trạng Thái</option>
-        {STATUSES.map((status) => (
-          <option key={status} value={status}>
-            {status}
-          </option>
-        ))}
-      </select>
+        onChange={(v) => onFilter("status", v)}
+      />
+      {/* Source */}
+      <ChipGroup
+        label="Nguồn"
+        options={SOURCES}
+        value={filters.source}
+        onChange={(v) => onFilter("source", v)}
+      />
       {/* Limit */}
-      <select
-        className="select select-bordered"
-        value={filters.limit}
-        onChange={(e) => onLimitChange(e.target.value)}
-      >
-        {LIMITS.map((limit) => (
-          <option key={limit} value={limit}>
-            {limit} từ/trang
-          </option>
-        ))}
-      </select>
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-base-content/50">
+          Hiển thị
+        </span>
+        <select
+          className="select select-bordered select-xs"
+          value={filters.limit}
+          onChange={(e) => onLimitChange(e.target.value)}
+        >
+          {LIMITS.map((limit) => (
+            <option key={limit} value={limit}>
+              {limit} từ/trang
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }

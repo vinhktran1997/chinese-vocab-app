@@ -1,24 +1,25 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const XLSX = require('xlsx');
-const { Word, splitHanzi, removeTones } = require('../models/Word');
-const upload = require('../middleware/upload');
+const XLSX = require("xlsx");
+const { Word, splitHanzi, removeTones } = require("../models/Word");
+const upload = require("../middleware/upload");
 
 // GET /api/words/test
-router.get('/test', (req, res) => {
-  res.json({ message: 'Words API is working' });
+router.get("/test", (req, res) => {
+  res.json({ message: "Words API is working" });
 });
 
 // GET /api/words
-router.get('/', async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const {
       search,
       hskLevel,
       type,
       status,
-      sort = 'createdAt',
-      order = 'desc',
+      source,
+      sort = "createdAt",
+      order = "desc",
       page = 1,
       limit = 20,
     } = req.query;
@@ -37,27 +38,29 @@ router.get('/', async (req, res) => {
     if (search) {
       const normalizedSearch = removeTones(search);
       query.$or = [
-        { hanzi: { $regex: search, $options: 'i' } },
-        { pinyin: { $regex: search, $options: 'i' } },
-        { pinyinNormalized: { $regex: normalizedSearch, $options: 'i' } },
-        { 'definitions.meanings': { $regex: search, $options: 'i' } },
+        { hanzi: { $regex: search, $options: "i" } },
+        { pinyin: { $regex: search, $options: "i" } },
+        { pinyinNormalized: { $regex: normalizedSearch, $options: "i" } },
+        { "definitions.meanings": { $regex: search, $options: "i" } },
       ];
     }
 
     if (hskLevel) query.hskLevel = hskLevel;
     if (status) query.status = status;
-    if (type) query['definitions.type'] = type;
+    if (type) query["definitions.type"] = type;
+    if (source) query.source = source;
 
     // Build sort
     const ALLOWED_SORTS = [
-      'hanzi',
-      'pinyin',
-      'hskLevel',
-      'status',
-      'createdAt',
+      "hanzi",
+      "pinyin",
+      "hskLevel",
+      "status",
+      "source",
+      "createdAt",
     ];
-    const sortField = ALLOWED_SORTS.includes(sort) ? sort : 'createdAt';
-    const sortOrder = order === 'asc' ? 1 : -1;
+    const sortField = ALLOWED_SORTS.includes(sort) ? sort : "createdAt";
+    const sortOrder = order === "asc" ? 1 : -1;
     const sortQuery = { [sortField]: sortOrder };
 
     // Execute query
@@ -77,16 +80,16 @@ router.get('/', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Get words error:', error);
+    console.error("Get words error:", error);
     res.status(500).json({
-      message: 'There are some bugs found on server!',
+      message: "There are some bugs found on server!",
       error: error.message,
     });
   }
 });
 
 // POST /api/words
-router.post('/', async (req, res) => {
+router.post("/", async (req, res) => {
   try {
     const existing = await Word.findOne({
       hanzi: req.body.hanzi?.trim(),
@@ -102,17 +105,17 @@ router.post('/', async (req, res) => {
     res.status(201).json(saved);
   } catch (error) {
     res.status(500).json({
-      message: 'There are some bugs found on server!',
+      message: "There are some bugs found on server!",
       error: error.message,
     });
   }
 });
 
 // POST /api/words/import
-router.post('/import', upload.single('file'), async (req, res) => {
+router.post("/import", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: 'No File Found!' });
+      return res.status(400).json({ message: "No File Found!" });
     }
 
     // Read Excel file
@@ -122,7 +125,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
     const rows = XLSX.utils.sheet_to_json(sheet);
 
     if (rows.length === 0) {
-      return res.status(400).json({ message: 'Empty File!' });
+      return res.status(400).json({ message: "Empty File!" });
     }
 
     // Transform Data
@@ -136,17 +139,17 @@ router.post('/import', upload.single('file'), async (req, res) => {
         wordMap.set(chars, {
           hanzi: chars,
           characters: splitHanzi(chars),
-          pinyin: row.pinyin?.trim() || '',
-          pinyinNormalized: removeTones(row.pinyin?.trim() || ''),
-          hskLevel: row.level?.trim() || 'Khác',
-          source: row.source?.trim() || '',
+          pinyin: row.pinyin?.trim() || "",
+          pinyinNormalized: removeTones(row.pinyin?.trim() || ""),
+          hskLevel: row.level?.trim() || "Khác",
+          source: row.source?.trim() || "",
           definitions: [],
         });
       }
       // Add 'definition' for hanzi
       const meanings = row.meanings
         ? row.meanings
-            .split('/')
+            .split("/")
             .map((m) => m.trim())
             .filter(Boolean)
         : [];
@@ -192,23 +195,23 @@ router.post('/import', upload.single('file'), async (req, res) => {
       updated: updatedCount,
     });
   } catch (error) {
-    console.error('Import Error:', error);
+    console.error("Import Error:", error);
     res.status(500).json({
-      message: 'Import Failed!',
+      message: "Import Failed!",
       error: error.message,
     });
   }
 });
 
 // GET /api/words/export
-router.get('/export', async (req, res) => {
+router.get("/export", async (req, res) => {
   try {
-    const { format = 'xlsx', hskLevel, status, type } = req.query;
+    const { format = "xlsx", hskLevel, status, type } = req.query;
 
     const query = {};
     if (hskLevel) query.hskLevel = hskLevel;
     if (status) query.status = status;
-    if (type) query['definitions.type'] = type;
+    if (type) query["definitions.type"] = type;
 
     const words = await Word.find(query).sort({
       hskLevel: 1,
@@ -216,7 +219,7 @@ router.get('/export', async (req, res) => {
     });
 
     if (words.length === 0) {
-      return res.status(404).json({ message: 'Không có từ nào để export!' });
+      return res.status(404).json({ message: "Không có từ nào để export!" });
     }
 
     const rows = [];
@@ -225,10 +228,10 @@ router.get('/export', async (req, res) => {
         rows.push({
           hanzi: word.hanzi,
           pinyin: word.pinyin,
-          type: '',
-          meanings: '',
+          type: "",
+          meanings: "",
           level: word.hskLevel,
-          source: word.source || '',
+          source: word.source || "",
           status: word.status,
         });
       } else {
@@ -237,9 +240,9 @@ router.get('/export', async (req, res) => {
             hanzi: word.hanzi,
             pinyin: word.pinyin,
             type: def.type,
-            meanings: def.meanings.join('/'),
+            meanings: def.meanings.join("/"),
             level: word.hskLevel,
-            source: word.source || '',
+            source: word.source || "",
             status: word.status,
           });
         }
@@ -248,9 +251,9 @@ router.get('/export', async (req, res) => {
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Words');
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Words");
 
-    worksheet['!cols'] = [
+    worksheet["!cols"] = [
       { wch: 12 },
       { wch: 20 },
       { wch: 22 },
@@ -263,34 +266,34 @@ router.get('/export', async (req, res) => {
     const timestamp = new Date().toISOString().slice(0, 10);
     const filename = `words_export_${timestamp}`;
 
-    if (format === 'csv') {
+    if (format === "csv") {
       const csv = XLSX.utils.sheet_to_csv(worksheet);
-      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader(
-        'Content-Disposition',
+        "Content-Disposition",
         `attachment; filename="${filename}.csv"`,
       );
-      res.send('\uFEFF' + csv);
+      res.send("\uFEFF" + csv);
     } else {
-      const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+      const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
       res.setHeader(
-        'Content-Type',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       );
       res.setHeader(
-        'Content-Disposition',
+        "Content-Disposition",
         `attachment; filename="${filename}.xlsx"`,
       );
       res.send(buffer);
     }
   } catch (error) {
-    console.error('Export error:', error);
-    res.status(500).json({ message: 'Export thất bại!', error: error.message });
+    console.error("Export error:", error);
+    res.status(500).json({ message: "Export thất bại!", error: error.message });
   }
 });
 
 // GET /api/words/review/stats?hskLevel=HSK2
-router.get('/review/stats', async (req, res) => {
+router.get("/review/stats", async (req, res) => {
   try {
     const { hskLevel, source } = req.query;
     const query = {};
@@ -299,7 +302,7 @@ router.get('/review/stats', async (req, res) => {
 
     const [total, reviewed] = await Promise.all([
       Word.countDocuments(query),
-      Word.countDocuments({ ...query, status: 'Đã Ôn' }),
+      Word.countDocuments({ ...query, status: "Đã Ôn" }),
     ]);
 
     res.json({
@@ -308,22 +311,22 @@ router.get('/review/stats', async (req, res) => {
       unreviewed: total - reviewed,
     });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server:', error: error.message });
+    res.status(500).json({ message: "Lỗi server:", error: error.message });
   }
 });
 
 // GET /api/words/review/session?hskLevel=HSK2&limit=20
-router.get('/review/session', async (req, res) => {
+router.get("/review/session", async (req, res) => {
   try {
     const { hskLevel, source, limit = 20 } = req.query;
-    const query = { status: 'Chưa Ôn' };
+    const query = { status: "Chưa Ôn" };
     if (hskLevel) query.hskLevel = hskLevel;
     if (source) query.source = source;
 
     const unreviewed = await Word.countDocuments(query);
     if (unreviewed === 0) {
       return res.status(400).json({
-        message: 'Tất cả các từ đã được ôn. Hãy làm mới để ôn lại từ đầu!',
+        message: "Tất cả các từ đã được ôn. Hãy làm mới để ôn lại từ đầu!",
         shouldReset: true,
       });
     }
@@ -338,64 +341,64 @@ router.get('/review/session', async (req, res) => {
 
     res.json({ words, total: unreviewed, selected: actualLimit });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server:', error: error.message });
+    res.status(500).json({ message: "Lỗi server:", error: error.message });
   }
 });
 
 // POST /api/words/review/complete
-router.post('/review/complete', async (req, res) => {
+router.post("/review/complete", async (req, res) => {
   try {
     const { remembered, forgotten } = req.body;
     const now = new Date();
     await Promise.all([
       Word.updateMany(
         { _id: { $in: remembered } },
-        { status: 'Đã Ôn', lastReviewedAt: now, $inc: { reviewCount: 1 } },
+        { status: "Đã Ôn", lastReviewedAt: now, $inc: { reviewCount: 1 } },
       ),
       Word.updateMany(
         { _id: { $in: forgotten } },
         { lastReviewedAt: now, $inc: { reviewCount: 1 } },
       ),
     ]);
-    res.json({ message: 'Lưu kết quả thành công!' });
+    res.json({ message: "Lưu kết quả thành công!" });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server:', error: error.message });
+    res.status(500).json({ message: "Lỗi server:", error: error.message });
   }
 });
 
 // POST /api/words/review/reset
-router.post('/review/reset', async (req, res) => {
+router.post("/review/reset", async (req, res) => {
   try {
     const { hskLevel, source } = req.body;
     const query = {};
     if (hskLevel) query.hskLevel = hskLevel;
     if (source) query.source = source;
-    await Word.updateMany(query, { status: 'Chưa Ôn' });
+    await Word.updateMany(query, { status: "Chưa Ôn" });
     const total = await Word.countDocuments(query);
     res.json({ message: `Đã làm mới ${total} từ về 'Chưa Ôn'!`, total });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server:', error: error.message });
+    res.status(500).json({ message: "Lỗi server:", error: error.message });
   }
 });
 
 // GET /api/words/:id
-router.get('/:id', async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
     const word = await Word.findById(req.params.id);
     if (!word) {
-      return res.status(404).json({ message: 'Word Not Found!' });
+      return res.status(404).json({ message: "Word Not Found!" });
     }
     res.json(word);
   } catch (error) {
     res.status(500).json({
-      message: 'There are some bugs found on server!',
+      message: "There are some bugs found on server!",
       error: error.message,
     });
   }
 });
 
 // PUT /api/words/:id
-router.put('/:id', async (req, res) => {
+router.put("/:id", async (req, res) => {
   try {
     const { hanzi, pinyin } = req.body;
 
@@ -411,48 +414,48 @@ router.put('/:id', async (req, res) => {
     });
 
     if (!updated) {
-      return res.status(404).json({ message: 'Word Not Found!' });
+      return res.status(404).json({ message: "Word Not Found!" });
     }
 
     res.json(updated);
   } catch (error) {
     res.status(500).json({
-      message: 'There are some bugs found on server!',
+      message: "There are some bugs found on server!",
       error: error.message,
     });
   }
 });
 
 // DELETE /api/words/:id
-router.delete('/:id', async (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
     const deleted = await Word.findByIdAndDelete(req.params.id);
     if (!deleted) {
-      return res.status(404).json({ message: 'Word Not Found!' });
+      return res.status(404).json({ message: "Word Not Found!" });
     }
-    res.json({ message: 'Deleted Successfully!', word: deleted });
+    res.json({ message: "Deleted Successfully!", word: deleted });
   } catch (error) {
     res.status(500).json({
-      message: 'There are some bugs found on server!',
+      message: "There are some bugs found on server!",
       error: error.message,
     });
   }
 });
 
 // PATCH /api/words/:id/status
-router.patch('/:id/status', async (req, res) => {
+router.patch("/:id/status", async (req, res) => {
   try {
     const word = await Word.findById(req.params.id);
     if (!word) {
-      return res.status(404).json({ message: 'Không tìm thấy từ!' });
+      return res.status(404).json({ message: "Không tìm thấy từ!" });
     }
 
-    word.status = word.status === 'Chưa Ôn' ? 'Đã Ôn' : 'Chưa Ôn';
+    word.status = word.status === "Chưa Ôn" ? "Đã Ôn" : "Chưa Ôn";
     await word.save();
     res.json(word);
   } catch (error) {
     res.status(500).json({
-      message: 'There are some bugs found on server!',
+      message: "There are some bugs found on server!",
       error: error.message,
     });
   }

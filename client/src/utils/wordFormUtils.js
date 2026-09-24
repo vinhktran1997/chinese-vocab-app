@@ -33,6 +33,9 @@ export const WORD_TYPES = [
 ];
 export const SOURCES = ["Quyển 1", "Quyển 2", "Quyển 3", "Quyển 4", "Quyển 5"];
 
+export const STATUSES = ["Chưa Ôn", "Đã Ôn"];
+export const LIMITS = [20, 50, 100];
+
 export const emptyUsageExample = { hanzi: "", pinyin: "", meaning: "" };
 export const emptyUsagePattern = {
   structure: "",

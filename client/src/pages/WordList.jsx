@@ -1,19 +1,22 @@
 import { useState, useEffect, useRef } from "react";
-import {
-  getWords,
-  deleteWord,
-  exportWords,
-  toggleStatus,
-} from "../services/wordService";
+import { getWords, deleteWord, exportWords } from "../services/wordService";
 import SearchBar from "../components/SearchBar";
 import FilterBar from "../components/FilterBar";
-import WordTable from "../components/WordTable";
+// import WordTable from "../components/WordTable";
+import WordGrid from "../components/WordGrid";
 import Pagination from "../components/Pagination";
 import { useNavigate } from "react-router-dom";
 import EditWord from "../components/EditWord";
 import { toast } from "sonner";
 import WordDetail from "../components/WordDetail";
 import useTheme from "../hooks/useTheme";
+
+const SORT_OPTIONS = [
+  { label: "Mới nhất", sort: "createdAt", order: "desc" },
+  { label: "Cũ nhất", sort: "createdAt", order: "asc" },
+  { label: "Chữ Hán A-Z", sort: "hanzi", order: "asc" },
+  { label: "Trình độ thấp → cao", sort: "hskLevel", order: "asc" },
+];
 
 export default function WordList() {
   const navigate = useNavigate();
@@ -32,6 +35,7 @@ export default function WordList() {
     hskLevel: "",
     type: "",
     status: "",
+    source: "",
     sort: "createdAt",
     order: "desc",
     page: 1,
@@ -43,7 +47,7 @@ export default function WordList() {
   const [detailWord, setDetailWord] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  const startIndex = (filters.page - 1) * filters.limit;
+  // const startIndex = (filters.page - 1) * filters.limit;
   // Fetch words whenever filters change
   useEffect(() => {
     const fetchWords = async () => {
@@ -79,10 +83,15 @@ export default function WordList() {
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
   };
 
-  const handleSort = (sort) => {
-    const order =
-      filters.sort === sort && filters.order === "asc" ? "desc" : "asc";
-    setFilters((prev) => ({ ...prev, sort, order, page: 1 }));
+  const handleSortChange = (e) => {
+    const selected = SORT_OPTIONS[e.target.value];
+    console.log(selected);
+    setFilters((prev) => ({
+      ...prev,
+      sort: selected.sort,
+      order: selected.order,
+      page: 1,
+    }));
   };
 
   const handlePageChange = (page) => {
@@ -151,15 +160,15 @@ export default function WordList() {
     });
   };
 
-  const handleToggleStatus = async (id) => {
-    try {
-      await toggleStatus(id);
-      setFilters((prev) => ({ ...prev }));
-    } catch (error) {
-      console.log(error);
-      toast.error("Cập nhật trạng thái thất bại!");
-    }
-  };
+  // const handleToggleStatus = async (id) => {
+  //   try {
+  //     await toggleStatus(id);
+  //     setFilters((prev) => ({ ...prev }));
+  //   } catch (error) {
+  //     console.log(error);
+  //     toast.error("Cập nhật trạng thái thất bại!");
+  //   }
+  // };
 
   const handleViewDetail = (word) => {
     setDetailWord(word);
@@ -420,21 +429,29 @@ export default function WordList() {
         onLimitChange={handleLimitChange}
       />
 
+      <div className="flex justify-end mb-3">
+        <select
+          className="select select-bordered select-sm"
+          onChange={handleSortChange}
+        >
+          {SORT_OPTIONS.map((opt, i) => (
+            <option key={i} value={i}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {loading ? (
         <div className="flex justify-center my-10">
           <span className="loading loading-spinner loading-lg"></span>
         </div>
       ) : (
         <>
-          <WordTable
-            startIndex={startIndex}
+          <WordGrid
             words={words}
-            sort={filters.sort}
-            order={filters.order}
-            onSort={handleSort}
-            onDelete={handleDelete}
             onEdit={handleEdit}
-            onToggleStatus={handleToggleStatus}
+            onDelete={handleDelete}
             onViewDetail={handleViewDetail}
           />
           <Pagination pagination={pagination} onPageChange={handlePageChange} />
